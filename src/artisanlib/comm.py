@@ -512,6 +512,7 @@ class serialport:
                                    self.PHIDGET_DAQ1000_45,   #148
                                    self.PHIDGET_DAQ1000_67,   #149
                                    self.MODBUS_910,           #150
+                                   self.PERFPRIME_TC0521  #151
                                    ]
         #string with the name of the program for device #27
         self.externalprogram:str = 'test.py'
@@ -1277,6 +1278,11 @@ class serialport:
     def VOLTCRAFTK204(self) -> Tuple[float,float,float]:
         tx = self.aw.qmc.timeclock.elapsedMilli()
         t2,t1 = self.CENTER309temperature()
+        return tx,t2,t1
+    
+    def PERFPRIME_TC0521(self) -> Tuple[float,float,float]:
+        tx = self.aw.qmc.timeclock.elapsedMilli()
+        t2,t1 = self.PP_TC0521temperature()
         return tx,t2,t1
 
     #especial function that collects extra T3 and T4 from Vol K204 while keeping compatibility
@@ -2978,6 +2984,91 @@ class serialport:
                 import binascii
                 settings = str(self.comport) + ',' + str(self.baudrate) + ',' + str(self.bytesize)+ ',' + str(self.parity) + ',' + str(self.stopbits) + ',' + str(self.timeout)
                 self.aw.addserial('CENTER309: ' + settings + ' || Tx = ' + cmd2str(binascii.hexlify(command)) + ' || Rx = ' + cmd2str(binascii.hexlify(r)))
+
+    def PP_TC0521temperature(self, retry:int = 1) -> Tuple[float, float]:
+        ##    command = "\x4B" returns 4 bytes . Model number.
+        ##    command = "\x48" simulates HOLD button
+        ##    command = "\x4D" simulates MAX/MIN button
+        ##    command = "\x4E" simulates EXIT MAX/MIN button
+        ##    command = "\x52" simulates TIME button
+        ##    command = "\x43" simulates C/F button
+        ##    command = "\x55" dump all memory
+        ##    command = "\x50" Load recorded data
+        ##    command = "\x41" returns 64 bytes (8x5 + 5 = 45) as follows:
+        ##
+        ##    "\x02\x80\xUU\xUU\xUU\xUU\xUU\xAA"  \x80 means "Celsi" (if \x00 then "Faren") UUs unknown
+        ##    "\xAA\xBB\xBB\xCC\xCC\xDD\xDD\x00"  Temprerature T1 = AAAA, T2=BBBB, T3= CCCC, T4 = DDDD
+        ##    "\x00\x00\x00\x00\x00\x00\x00\x00"  unknown (possible data containers but found empty)
+        ##    "\x00\x00\x00\x00\x00\x00\x00\x00"  unknown
+        ##    "\x00\x00\x00\x00\x00\x00\x00\x00"  unknown
+        ##    "\x00\x00\x00\x0E\x03"              The byte r[43] \x0E changes depending on what thermocouple(s) are connected.
+        ##                                        If T1 thermocouple connected alone, then r[43]  = \x0E = 14
+        ##                                        If T2 thermocouple connected alone, then r[43]  = \x0D = 13
+        ##                                        If T1 + T2 thermocouples connected, then r[43]  = \x0C = 12
+        ##                                        If T3 thermocouple connected alone, then r[43]  = \x0B = 11
+        ##                                        If T4 thermocouple connected alone, then r[43]  = \x07 = 7
+        ##                                        Note: Print r[43] if you want to find other connect-combinations
+        ##                                        THIS ONLY WORKS WHEN TEMPERATURE < 200. If T >= 200 r[43] changes
+        r = b''
+        command = str2cmd('\x41')
+        try:
+            if not self.SP.is_open:
+                self.openport()
+            if self.SP.is_open:
+                self.SP.reset_output_buffer()
+                self.SP.reset_input_buffer()
+                self.SP.write(command)
+                self.SP.flush()
+                libtime.sleep(.1)
+                r = self.SP.read(64)
+                # the device needs 0.1 too answer a request for temperature data
+                # and delivers a reading maximally every 0.4sec, however,
+                # readings are internally updated within the instrument only at a rate of about every 3sec thus Artisan should not sample faster than every 3sec
+                if len(r) != 64:
+                    # we did not receive all data yet, let's wait a little longer and try to fetch the missing part
+                    libtime.sleep(0.05)
+                    r = r + self.SP.read(64 - len(r))
+                if len(r) == 64:
+                    T1 = T2 = T3 = T4 = -1.
+                    try:
+                        T1 = hex2int(r[10],r[11])/10.
+                    except Exception: # pylint: disable=broad-except
+                        pass
+                    try:
+                        T2 = hex2int(r[12],r[13])/10.
+                    except Exception: # pylint: disable=broad-except
+                        pass
+                    try:
+                        T3 = hex2int(r[14],r[15])/10.
+                    except Exception: # pylint: disable=broad-except
+                        pass
+                    try:
+                        T4 = hex2int(r[16],r[17])/10.
+                    except Exception: # pylint: disable=broad-except
+                        pass
+                    #save these variables if using T3 and T4
+                    self.aw.qmc.extra309T3 = T3
+                    self.aw.qmc.extra309T4 = T4
+                    self.aw.qmc.extra309TX = self.aw.qmc.timeclock.elapsedMilli()
+                    return T1,T2
+                if retry:
+                    return self.PP_TC0521temperature(retry=retry-1)
+                nbytes = len(r)
+                self.aw.qmc.adderror(QApplication.translate('Error Message','PP_TC0521temperature(): {0} bytes received but 64 needed').format(nbytes))
+                return -1,-1
+            return -1,-1
+        except Exception as ex: # pylint: disable=broad-except
+            _log.exception(ex)
+            _, _, exc_tb = sys.exc_info()
+            self.aw.qmc.adderror((QApplication.translate('Error Message','Exception:') + ' PP_TC0521temperature() {0}').format(str(ex)),getattr(exc_tb, 'tb_lineno', '?'))
+            self.closeport()
+            return -1,-1
+        finally:
+            #note: logged chars should be unicode not binary
+            if self.aw.seriallogflag:
+                import binascii
+                settings = str(self.comport) + ',' + str(self.baudrate) + ',' + str(self.bytesize)+ ',' + str(self.parity) + ',' + str(self.stopbits) + ',' + str(self.timeout)
+                self.aw.addserial('PP_TC0521: ' + settings + ' || Tx = ' + cmd2str(binascii.hexlify(command)) + ' || Rx = ' + cmd2str(binascii.hexlify(r)))
 
 #---
 

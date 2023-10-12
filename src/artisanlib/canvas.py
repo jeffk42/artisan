@@ -847,6 +847,7 @@ class tgraphcanvas(FigureCanvas):
                        '+Phidget DAQ1000 45',       #148
                        '+Phidget DAQ1000 67',       #149
                        '+MODBUS 910',               #150
+                       'PerfectPrime TC0521',       #151
                        ]
 
         # ADD DEVICE:

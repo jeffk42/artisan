@@ -2373,6 +2373,15 @@ class DeviceAssignmentDlg(ArtisanResizeablDialog):
                     self.aw.ser.stopbits = 1
                     self.aw.ser.timeout = 0.7
                     message = QApplication.translate('Message','Device set to {0}. Now, choose serial port').format(meter)
+                elif meter == 'PerfectPrime TC0521' and self.aw.qmc.device != 151:
+                    self.aw.qmc.device = 151
+                    #self.aw.ser.comport = "COM4"
+                    self.aw.ser.baudrate = 9600
+                    self.aw.ser.bytesize = 8
+                    self.aw.ser.parity= 'N'
+                    self.aw.ser.stopbits = 1
+                    self.aw.ser.timeout = 0.7
+                    message = QApplication.translate('Message','Device set to {0}. Now, choose serial port').format(meter)
                 elif meter == 'CENTER 306' and self.aw.qmc.device != 4:
                     self.aw.qmc.device = 4
                     #self.aw.ser.comport = "COM4"
@@ -3249,7 +3258,8 @@ class DeviceAssignmentDlg(ArtisanResizeablDialog):
                 1, # 147
                 1, # 148
                 1, # 149
-                7  # 150
+                7, # 150
+                3, # 151
                 ]
             #init serial settings of extra devices
             for i, _ in enumerate(self.aw.qmc.extradevices):
