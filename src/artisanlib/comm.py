@@ -3031,19 +3031,19 @@ class serialport:
                 if len(r) == 64:
                     T1 = T2 = T3 = T4 = -1.
                     try:
-                        T1 = hex2int(r[10],r[11])/10.
+                        T1 = hex2int(r[9],r[10])/10.
                     except Exception: # pylint: disable=broad-except
                         pass
                     try:
-                        T2 = hex2int(r[12],r[13])/10.
+                        T2 = hex2int(r[11],r[12])/10.
                     except Exception: # pylint: disable=broad-except
                         pass
                     try:
-                        T3 = hex2int(r[14],r[15])/10.
+                        T3 = hex2int(r[13],r[14])/10.
                     except Exception: # pylint: disable=broad-except
                         pass
                     try:
-                        T4 = hex2int(r[16],r[17])/10.
+                        T4 = hex2int(r[15],r[16])/10.
                     except Exception: # pylint: disable=broad-except
                         pass
                     #save these variables if using T3 and T4
