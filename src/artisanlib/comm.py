@@ -3000,7 +3000,7 @@ class serialport:
         ##    "\xAA\xBB\xBB\xCC\xCC\xDD\xDD\x00"  Temprerature T1 = AAAA, T2=BBBB, T3= CCCC, T4 = DDDD
         ##    "\x00\x00\x00\x00\x00\x00\x00\x00"  unknown (possible data containers but found empty)
         ##    "\x00\x00\x00\x00\x00\x00\x00\x00"  unknown
-        ##    "\x00\x00\x00\x00\x00\x00\x00\x00"  unknown
+        ##    "\x00\x00\x00\x00\x00\x00\x00\x00"  unknown2
         ##    "\x00\x00\x00\x0E\x03"              The byte r[43] \x0E changes depending on what thermocouple(s) are connected.
         ##                                        If T1 thermocouple connected alone, then r[43]  = \x0E = 14
         ##                                        If T2 thermocouple connected alone, then r[43]  = \x0D = 13
