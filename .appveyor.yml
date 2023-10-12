@@ -46,7 +46,7 @@ init:
 
 branches:
   only:
-    - master
+    - device_add
 
 stack:
   python ${PYTHON_V}
